@@ -85,6 +85,7 @@ async def all_sub(call: types.CallbackQuery):
          ]
     ]
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
+    await bot.send_photo(chat_id=call.message.chat.id, photo=types.InputFile(f"src/images/{name_servise}.png"))
     await bot.send_message(chat_id=call.message.chat.id, text='выберите тариф подписки',
                            reply_markup=keyboard)
 
