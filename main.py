@@ -24,33 +24,64 @@ async def smd_start(message: types.Message):
 Для открытия меню нажмите /menu"""
     await bot.send_message(chat_id=message.chat.id, text=text, parse_mode="Markdown")
 
+
 @dp.message_handler(commands="menu", state="*")
 async def start_menu(message: types.Message):
     """
     приветственное сообщение
     """
+
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(text="Meta", callback_data="meta0"))
-    buttons = [
-        [types.InlineKeyboardButton(text="💫спиок подписок💫",
-                                    callback_data="subscription_list"),
-         types.InlineKeyboardButton(text="💸продать аккаунт💸",
-                                    callback_data="sale_account")],
-        [
-            types.InlineKeyboardButton(text="📱подписка scarlett📱",
-                                       callback_data="scarlett")
-        ],
-        [
-            types.InlineKeyboardButton(text="🛒мои покупки🛒",
-                                       callback_data="my_buy"),
-            types.InlineKeyboardButton(text="💬поддержка💬",
-                                       callback_data="help")
+    if message['from']['id'] != 1076674186:
+        buttons = [
+            [types.InlineKeyboardButton(text="💫спиок подписок💫",
+                                        callback_data="subscription_list"),
+             types.InlineKeyboardButton(text="💸продать аккаунт💸",
+                                        callback_data="sale_account")],
+            [
+                types.InlineKeyboardButton(text="📱подписка scarlett📱",
+                                           callback_data="scarlett")
+            ],
+            [
+                types.InlineKeyboardButton(text="🛒мои покупки🛒",
+                                           callback_data="my_buy"),
+                types.InlineKeyboardButton(text="💬поддержка💬",
+                                           callback_data="help")
+            ]
         ]
-    ]
+    else:
+        buttons = [
+            [types.InlineKeyboardButton(text="💫спиок подписок💫",
+                                        callback_data="subscription_list"),
+             types.InlineKeyboardButton(text="💸продать аккаунт💸",
+                                        callback_data="sale_account")],
+            [
+                types.InlineKeyboardButton(text="📱подписка scarlett📱",
+                                           callback_data="scarlett")
+            ],
+            [
+                types.InlineKeyboardButton(text="🛒мои покупки🛒",
+                                           callback_data="my_buy"),
+                types.InlineKeyboardButton(text="💬поддержка💬",
+                                           callback_data="help")
+            ],
+            [types.InlineKeyboardButton(text="добавить данные в БД",
+                                        callback_data="add_bd")
+             ]
+        ]
 
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
     return await bot.send_message(chat_id=message.chat.id, text='выберите героя о котром хотите узнать подробрнее',
                                   reply_markup=keyboard)
+
+
+@dp.callback_query_handler(lambda call: call.data.startswith('add_bd'))
+async def sale_account(call: types.CallbackQuery):
+    text = """Отправьте файл формата txt с поляи:
+    имя дата_создания(по умолчанию текущий день) длительность_подписки цена_за_день 
+    """
+    await bot.send_message(chat_id=call.message.chat.id, text=text)
 
 
 @dp.callback_query_handler(lambda call: call.data.startswith('sale_account'))
@@ -164,6 +195,18 @@ async def successful_payment(message: types.Message):
         print(f"{k} = {v}")
     await bot.send_message(message.chat.id,
                            f"Платеж на сумму {inf.total_amount // 100} {inf.currency} прошёл успешно!!!")
+
+
+@dp.message_handler(content_types=ContentType.DOCUMENT)
+async def qwe(message: types.Message):
+    if message['from']['id'] != 1076674186:
+        file_id = message.document.file_id
+        file = await bot.get_file(file_id)
+        file_path = file.file_path
+        await bot.download_file(file_path, "data.txt")
+    else:
+        await bot.send_message(message.chat.id,
+                               f"К сожалению такая команда отсутствует \n\nДля перехода в менб нажмите /menu")
 
 
 if __name__ == "__main__":
