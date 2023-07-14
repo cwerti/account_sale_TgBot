@@ -1,7 +1,6 @@
-import asyncio
 import logging
 from aiogram import Bot, Dispatcher, executor, types
-from aiogram.types import InputFile
+
 from aiogram.types.message import ContentType
 import config
 import nest_asyncio
@@ -106,7 +105,7 @@ async def all_sub(call: types.CallbackQuery):
                            payload="test-invoice-payload")
 
 
-@dp.pre_checkout_query_handler(func=lambda query: True)
+@dp.pre_checkout_query_handler(lambda query: True)
 async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery):
     await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
 
