@@ -1,4 +1,3 @@
-from src.data.OperationsDataBase import add_user, get_subs, Buy_Subscription, start_DB
 import more_itertools as mit
 
 import logging
@@ -9,6 +8,7 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.types.message import ContentType
 
+from src.data.OperationsDataBase import add_user, get_subs, Buy_Subscription, start_DB, get_operations
 import config
 
 nest_asyncio.apply()
@@ -78,8 +78,8 @@ async def start_menu(message: types.Message):
 
 @dp.callback_query_handler(lambda call: call.data.startswith('my_buy'))
 async def my_buy(call: types.CallbackQuery):
-    text = """"qwe"""
-    await bot.send_message(chat_id=call.message.chat.id, text=text)
+    text = get_operations(call['from']['id'])
+    await bot.send_message(chat_id=call.message.chat.id, text=text, parse_mode='Markdown')
 
 
 @dp.callback_query_handler(lambda call: call.data.startswith('add_bd'))
