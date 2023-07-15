@@ -92,23 +92,19 @@ async def all_sub(call: types.CallbackQuery):
 
     sess = db_session.create_session()
     sub = sess.query(Subscription).filter(Subscription.name == name_servise).all()  # фильтрация только по имени
-    print(sub[0].duration, sub[0].name, sub[0].created_date)
     sub = list(filter(flag, sub))  # фильтрация по оставшемуся времени(я заколебался в потоке пытаться сделать)
-    print('aaa', sub)
     but = []
     for i in sub:
         ostat = (datetime.datetime.now().date() - i.created_date.date()).days
         but.append(types.InlineKeyboardButton(text=f"{ostat} дней {ostat * i.price}р",
                                                   callback_data=f"payment|{ostat}|{ostat * i.price}"))
-    but = list(mit.chunked(but, 3))
-    print(but)
     buttons = [
-        *but,  # ЧТО ТУТ НЕ ТАК? Я УСТАЛ...(ПЕРЕПРОБОВАЛ ВСЕ КОМБИНАЦИИ)
+        *mit.chunked(but, 3),
         [types.InlineKeyboardButton(text="назад", callback_data="subscription_list")
          ]
     ]
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
-    await bot.send_photo(chat_id=call.message.chat.id, photo=types.InputFile(f"src/images/{name_servise}.png"))
+    await bot.send_photo(chat_id=call.message.chat.id, photo=types.InputFile(f"src/images/kino.png"))  # f"src/images/{name_servise}.png"
     await bot.send_message(chat_id=call.message.chat.id, text='выберите тариф подписки',
                            reply_markup=keyboard)
 
@@ -148,7 +144,7 @@ if __name__ == "__main__":
     db_session.global_init('src/db/TestDB.sqlite')
     session = db_session.create_session()
     # for i in [['окко', 13.33, 30, datetime.date(2023, 7, 1)], ['премьер', 6.66, 32, datetime.date(2023, 7, 13)],
-    #          ['кинопоиск', 6.66, 65, datetime.date(2023, 7, 13)], ['иви', 13.33, 92, datetime.date(2023, 6, 13)]]:
+    #          ['кинопоиск', 12.66, 65, datetime.date(2023, 7, 13)], ['иви', 13.33, 92, datetime.date(2023, 6, 13)]]:
     #     n, p, d, c = i
     #     session.add(Subscription(name=n, price=p, duration=d, created_date=c))
     # session.commit()
