@@ -9,6 +9,8 @@ class Subscription(SqlAlchemyBase):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False)
+    login = Column(String, nullable=False)
+    password = Column(String, nullable=False)
     created_date = Column(DateTime, default=datetime.datetime.now)
     duration = Column(Integer, nullable=False)
     price = Column(Float, nullable=False)

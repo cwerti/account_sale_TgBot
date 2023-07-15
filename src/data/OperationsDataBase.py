@@ -34,6 +34,7 @@ def get_subs(button_index: int, name_service: str, user_tg_id: int) -> list:
     sub = list(filter(lambda x: ostat(x) * x.price >= 100., sub))  # ограничение телеграмма
     sub = list(filter(lambda x: str(user_id) not in x.users_id, sub))  # убираем подписки, на которые user уже подписан
     sess.close()
+
     return [types.InlineKeyboardButton(
         text=f"{ostat(i)} дней {ostat(i) * i.price}р",
         callback_data=f"payment|{ostat(i)}|{ostat(i) * i.price}|{name_service}|{i.id}") for i in sub]
@@ -51,20 +52,47 @@ def Buy_Subscription(invoice_payload: str) -> bool:
     user = sess.query(User).filter(User.tg_id == user_tg_id).first()
     operation = History(subscription_id=sub_id, user_id=user.id, price=float(f"{price // 100}.{price % 100}"))
     sess.add(operation)
+    sess.flush()
+
     user.subscriptions_id += f" {sub.id}"
     sub.users_id += f" {user.id}"
     user.operations_id += f" {operation.id}"
+
     sess.commit()
     sess.close()
     return True
 
 
+def get_operations(user_tg_id: int) -> str:
+    sess = db_session.create_session()
+    user = sess.query(User).filter(User.tg_id == user_tg_id).first()
+    user_opers = user.operations_id
+    op_user_ids = list(map(int, user_opers.split()))
+    operations = sess.query(History).filter(History.id.in_(op_user_ids)).all()
+    operations.sort(key=lambda x: x.created_date)
+    result = ''
+
+    count_oper = len(operations)
+    if count_oper == 0:
+        return "Вы не приобрели ни одного аккаунта("
+    for i in range(count_oper):
+        sub = sess.get(Subscription, operations[i].subscription_id)
+        result += f"*{i + 1}) *{operations[i].created_date.replace(microsecond=0)} " \
+                  f"Вы купили аккаунт на сервисе _{sub.name}_ длительностью {sub.duration} дней за " \
+                  f"{operations[i].price} рублей.\n*Данные аккаунта\nЛогин: *{sub.login}\n*Пароль: *{sub.password}\n\n"
+    result += 'Спасибо, что выбрали наш _Telegram-бот!_'
+    print(result)
+    return result
+
+
 def add_Subscription():
     session = db_session.create_session()
-    for i in [['okko', 133.3, 30, datetime.date(2023, 7, 1)], ['prem', 6.66, 32, datetime.date(2023, 7, 13)],
-             ['kino', 12.66, 65, datetime.date(2023, 7, 13)], ['ivi', 13.33, 92, datetime.date(2023, 6, 13)]]:
-        n, p, d, c = i
-        session.add(Subscription(name=n, price=p, duration=d, created_date=c))
+    for i in [['okko', 133.3, 30, datetime.date(2023, 7, 1), '123', '312'],
+              ['prem', 6.66, 32, datetime.date(2023, 7, 13), '777', '775'],
+              ['kino', 12.66, 65, datetime.date(2023, 7, 13), 'gdg', 'zxc'],
+              ['ivi', 13.33, 92, datetime.date(2023, 6, 13), '7sf', 'pudge']]:
+        n, p, d, c, l, g = i
+        session.add(Subscription(name=n, price=p, duration=d, created_date=c, login=l, password=g))
     session.commit()
     session.close()
-    return
+
