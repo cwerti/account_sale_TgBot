@@ -8,6 +8,7 @@ from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.types.message import ContentType
+from aiogram.dispatcher import filters
 
 import config
 
@@ -76,6 +77,8 @@ async def start_menu(message: types.Message):
                                   reply_markup=keyboard)
 
 
+
+
 @dp.callback_query_handler(lambda call: call.data.startswith('my_buy'))
 async def my_buy(call: types.CallbackQuery):
     text = """"qwe"""
@@ -84,10 +87,22 @@ async def my_buy(call: types.CallbackQuery):
 
 @dp.callback_query_handler(lambda call: call.data.startswith('add_bd'))
 async def sale_account(call: types.CallbackQuery):
-    text = """Отправьте файл формата txt с полями:
-    имя дата_создания(по умолчанию текущий день) длительность_подписки цена_за_день 
+    text = """Отправьте текст формата:
+    добавление в bd
+    login password дата_создания(по умолчанию текущий день) длительность_подписки цена_за_день 
     """
     await bot.send_message(chat_id=call.message.chat.id, text=text)
+
+
+@dp.message_handler(filters.Text(contains="добавление в bd", ignore_case=True))
+async def text_example(message: types.Message):
+    if message['from']['id'] == 1076674186:
+        """она будет обрабатывать и добавлять данные в бд
+        формат данных в функцие которая выше
+        """
+        await bot.send_message(chat_id=message.chat.id, text='данные добавлены успешно!')
+    else:
+        await bot.send_message(chat_id=message.chat.id, text='такой команды не существует!')
 
 
 @dp.callback_query_handler(lambda call: call.data.startswith('sale_account'))
