@@ -76,6 +76,12 @@ async def start_menu(message: types.Message):
                                   reply_markup=keyboard)
 
 
+@dp.callback_query_handler(lambda call: call.data.startswith('my_buy'))
+async def my_buy(call: types.CallbackQuery):
+    text = """"qwe"""
+    await bot.send_message(chat_id=call.message.chat.id, text=text)
+
+
 @dp.callback_query_handler(lambda call: call.data.startswith('add_bd'))
 async def sale_account(call: types.CallbackQuery):
     text = """Отправьте файл формата txt с полями:
@@ -188,7 +194,7 @@ async def successful_payment(message: types.Message):
     print("SUCCESSFUL PAYMENT:")
     inf = message.successful_payment
     await bot.send_message(message.chat.id,
-                f"Платеж на сумму {inf.total_amount // 100},{inf.total_amount % 100} {inf.currency} прошёл успешно!")
+                           f"Платеж на сумму {inf.total_amount // 100},{inf.total_amount % 100} {inf.currency} прошёл успешно!")
 
 
 @dp.message_handler(content_types=ContentType.DOCUMENT)
