@@ -7,5 +7,6 @@ class User(SqlAlchemyBase):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     tg_id = Column(Integer, nullable=False, unique=True)
-    subscriptions_id = Column(String)
+    subscriptions_id = Column(String, default=' ')
+    operations_id = Column(String, default=' ')
 

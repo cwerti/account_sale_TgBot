@@ -1,11 +1,5 @@
-import datetime
-
-from src.data import db_session
-from src.data.users import User
-from src.data.subscription import Subscription
-from src.data.history import History
+from src.data.OperationsDataBase import add_user, get_subs, Buy_Subscription, start_DB
 import more_itertools as mit
-from sqlalchemy import and_, all_
 
 import logging
 
@@ -27,8 +21,9 @@ logging.basicConfig(level=logging.INFO)
 
 @dp.message_handler(commands="start", state="*")
 async def smd_start(message: types.Message):
+    add_user(message.from_id)
     text = f"""Привет, _{message.chat.first_name}_👋
-С помошью этого бота вы сможете купить подписки для различных сервисов, таких как _kion, okko, skarlett_ и д. р.
+С помощью этого бота вы сможете купить подписки для различных сервисов, таких как _kion, okko, skarlett_ и д. р.
 
 Для открытия меню нажмите /menu"""
     await bot.send_message(chat_id=message.chat.id, text=text, parse_mode="Markdown")
@@ -36,18 +31,11 @@ async def smd_start(message: types.Message):
 
 @dp.message_handler(commands="menu", state="*")
 async def start_menu(message: types.Message):
-    session = db_session.create_session()
-    res = session.query(User).filter(User.tg_id == message.from_id).first()
-    if not res:
-        user = User(tg_id=message.from_id)
-        session.add(user)
-        session.commit()
-    session.close()
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(text="Meta", callback_data="meta0"))
     if message['from']['id'] != 1076674186:
         buttons = [
-            [types.InlineKeyboardButton(text="💫спиок подписок💫",
+            [types.InlineKeyboardButton(text="💫список подписок💫",
                                         callback_data="subscription_list"),
              types.InlineKeyboardButton(text="💸продать аккаунт💸",
                                         callback_data="sale_account")],
@@ -64,7 +52,7 @@ async def start_menu(message: types.Message):
         ]
     else:
         buttons = [
-            [types.InlineKeyboardButton(text="💫спиок подписок💫",
+            [types.InlineKeyboardButton(text="💫список подписок💫",
                                         callback_data="subscription_list"),
              types.InlineKeyboardButton(text="💸продать аккаунт💸",
                                         callback_data="sale_account")],
@@ -84,13 +72,13 @@ async def start_menu(message: types.Message):
         ]
 
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
-    return await bot.send_message(chat_id=message.chat.id, text='выберите героя о котром хотите узнать подробрнее',
+    return await bot.send_message(chat_id=message.chat.id, text='выберите героя о котором хотите узнать подробнее',
                                   reply_markup=keyboard)
 
 
 @dp.callback_query_handler(lambda call: call.data.startswith('add_bd'))
 async def sale_account(call: types.CallbackQuery):
-    text = """Отправьте файл формата txt с поляи:
+    text = """Отправьте файл формата txt с полями:
     имя дата_создания(по умолчанию текущий день) длительность_подписки цена_за_день 
     """
     await bot.send_message(chat_id=call.message.chat.id, text=text)
@@ -134,11 +122,11 @@ async def subscription_list(call: types.CallbackQuery):
     for i in config.service_lst:
         buttons = [
             [types.InlineKeyboardButton(text="меньше 30",
-                                        callback_data=f"buy|1|{i}"),
+                                        callback_data=f"buy|0|{i}"),
              types.InlineKeyboardButton(text="от 30 до 90",
-                                        callback_data=f"buy|2|{i}"),
+                                        callback_data=f"buy|1|{i}"),
              types.InlineKeyboardButton(text="больше 90",
-                                        callback_data=f"buy|3|{i}")
+                                        callback_data=f"buy|2|{i}")
              ]
         ]
         keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -151,33 +139,20 @@ async def subscription_list(call: types.CallbackQuery):
 async def all_sub(call: types.CallbackQuery):
     """
     функция выода доступных подписок
-    days: если 1, то меньше или равно 30, если 2 то от 30 до 90, если 3 то больше или равно 90
-    name_servise: название сервиса
+    days: если 0, то меньше или равно 30, если 1 то от 30 до 90, если 2 то больше или равно 90
+    name_service: название сервиса
     """
     tmp = call.data.split('|')
-    vir = lambda x: x.duration - (datetime.datetime.now() - x.created_date).days
-    flag = [lambda x: vir(x) < 31, lambda x: 30 < vir(x) < 91, lambda x: vir(x) > 90][int(tmp[1]) - 1]
-    name_servise = 'кинопоиск'  # tmp[2] пока оставь так, в данной версии у тебя пока что стоит только kino
+    name_service = tmp[2]
+    but = get_subs(int(tmp[1]), name_service, call['from']['id'])
 
-    sess = db_session.create_session()
-    sub = sess.query(Subscription).filter(Subscription.name == name_servise).all()  # фильтрация только по имени
-    sub = list(filter(flag, sub))  # фильтрация по оставшемуся времени(я заколебался в потоке пытаться сделать)
-    sess.close()
-    but = []
-    name_servise = 'kino'  # для теста
-    for i in sub:
-        ostat = (datetime.datetime.now().date() - i.created_date.date()).days
-        but.append(types.InlineKeyboardButton(text=f"{ostat} дней {int(ostat * i.price)}р",
-                                                  callback_data=f"payment|{ostat}|{int(ostat * i.price)}|{name_servise}"))
     buttons = [
-        [types.InlineKeyboardButton(text=f"{12} дней {120}р",
-                                                  callback_data=f"payment|{12}|{120}|{name_servise}"),
-         but[0]],
+        *mit.batched(but, 3),
         [types.InlineKeyboardButton(text="назад", callback_data="subscription_list")
          ]
     ]
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
-    await bot.send_photo(chat_id=call.message.chat.id, photo=types.InputFile(f"src/images/{name_servise}.png"))  #
+    await bot.send_photo(chat_id=call.message.chat.id, photo=types.InputFile(f"src/images/{name_service}.png"))
     await bot.send_message(chat_id=call.message.chat.id, text='выберите тариф подписки',
                            reply_markup=keyboard)
 
@@ -186,23 +161,25 @@ async def all_sub(call: types.CallbackQuery):
 async def all_sub(call: types.CallbackQuery):
     tmp = call.data.split('|')
     day = tmp[1]
-    price = tmp[2]
-    name_servise = tmp[3]
+    price = int(float(tmp[2]) * 100)
+    name_service = tmp[3]
+    sub_id = int(tmp[4])
     PAYMENTS_PROVIDER_TOKEN = '381764678:TEST:61580'
-    PRICE = types.LabeledPrice(label=f"Подписка на {day} месяц", amount=int(price) * 100)  # в копейках (руб)
+    PRICE = types.LabeledPrice(label=f"Подписка на {day} месяц", amount=price)  # в копейках (руб)
     await bot.send_invoice(call.message.chat.id,
-                           title=f"Подписка на {name_servise}",
-                           description=f"""Аккаунт с подпиской {name_servise} на {day} дней""",
+                           title=f"Подписка на {name_service}",
+                           description=f"""Аккаунт с подпиской {name_service} на {day} дней""",
                            provider_token=PAYMENTS_PROVIDER_TOKEN,
                            currency="rub",
                            is_flexible=False,
                            prices=[PRICE],
                            start_parameter="one-month-subscription",
-                           payload="test-invoice-payload")
+                           payload=f"{sub_id}|{call['from']['id']}|{price}")
 
 
 @dp.pre_checkout_query_handler(lambda query: True)
 async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery):
+    flag = Buy_Subscription(pre_checkout_query.invoice_payload)  # если оплата не пройдёт, вернёт False
     await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
 
 
@@ -210,11 +187,8 @@ async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery)
 async def successful_payment(message: types.Message):
     print("SUCCESSFUL PAYMENT:")
     inf = message.successful_payment
-    payment_info = inf.to_python()
-    for k, v in payment_info.items():
-        print(f"{k} = {v}")
     await bot.send_message(message.chat.id,
-                           f"Платеж на сумму {inf.total_amount // 100} {inf.currency} прошёл успешно!!!")
+                f"Платеж на сумму {inf.total_amount // 100},{inf.total_amount % 100} {inf.currency} прошёл успешно!")
 
 
 @dp.message_handler(content_types=ContentType.DOCUMENT)
@@ -226,17 +200,10 @@ async def qwe(message: types.Message):
         await bot.download_file(file_path, "data.txt")
     else:
         await bot.send_message(message.chat.id,
-                               f"К сожалению такая команда отсутствует \n\nДля перехода в менб нажмите /menu")
+                               f"К сожалению такая команда отсутствует \n\nДля перехода в меню нажмите /menu")
 
 
 if __name__ == "__main__":
     # Запуск бота
-    db_session.global_init('src/db/TestDB.sqlite')
-    session = db_session.create_session()
-    # for i in [['окко', 13.33, 30, datetime.date(2023, 7, 1)], ['премьер', 6.66, 32, datetime.date(2023, 7, 13)],
-    #          ['кинопоиск', 12.66, 65, datetime.date(2023, 7, 13)], ['иви', 13.33, 92, datetime.date(2023, 6, 13)]]:
-    #     n, p, d, c = i
-    #     session.add(Subscription(name=n, price=p, duration=d, created_date=c))
-    # session.commit()
-    session.close()
+    start_DB()
     executor.start_polling(dp, skip_updates=True)
