@@ -162,18 +162,22 @@ async def all_sub(call: types.CallbackQuery):
     sess = db_session.create_session()
     sub = sess.query(Subscription).filter(Subscription.name == name_servise).all()  # фильтрация только по имени
     sub = list(filter(flag, sub))  # фильтрация по оставшемуся времени(я заколебался в потоке пытаться сделать)
+    sess.close()
     but = []
+    name_servise = 'kino'  # для теста
     for i in sub:
         ostat = (datetime.datetime.now().date() - i.created_date.date()).days
-        but.append(types.InlineKeyboardButton(text=f"{ostat} дней {ostat * i.price}р",
-                                                  callback_data=f"payment|{ostat}|{ostat * i.price}"))
+        but.append(types.InlineKeyboardButton(text=f"{ostat} дней {int(ostat * i.price)}р",
+                                                  callback_data=f"payment|{ostat}|{int(ostat * i.price)}|{name_servise}"))
     buttons = [
-        *mit.chunked(but, 3),
+        [types.InlineKeyboardButton(text=f"{12} дней {120}р",
+                                                  callback_data=f"payment|{12}|{120}|{name_servise}"),
+         but[0]],
         [types.InlineKeyboardButton(text="назад", callback_data="subscription_list")
          ]
     ]
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
-    await bot.send_photo(chat_id=call.message.chat.id, photo=types.InputFile(f"src/images/kino.png"))  # f"src/images/{name_servise}.png"
+    await bot.send_photo(chat_id=call.message.chat.id, photo=types.InputFile(f"src/images/{name_servise}.png"))  #
     await bot.send_message(chat_id=call.message.chat.id, text='выберите тариф подписки',
                            reply_markup=keyboard)
 
