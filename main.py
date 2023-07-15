@@ -8,30 +8,34 @@ import more_itertools as mit
 from sqlalchemy import and_, all_
 
 import logging
-from aiogram import Bot, Dispatcher, executor, types
 
-from aiogram.types.message import ContentType
-import config
 import nest_asyncio
+from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
+from aiogram.types.message import ContentType
+
+import config
 
 nest_asyncio.apply()
 
-# Объект бота
 bot = Bot(token=config.BOT_TOKEN)
-# Диспетчер для бота
 dp = Dispatcher(bot, storage=MemoryStorage())
 dp.middleware.setup(LoggingMiddleware())
-# Включаем логирование, чтобы не пропустить важные сообщения
 logging.basicConfig(level=logging.INFO)
 
 
 @dp.message_handler(commands="start", state="*")
-async def cmd_start(message: types.Message):
-    """
-    приветственное сообщение
-    """
+async def smd_start(message: types.Message):
+    text = f"""Привет, _{message.chat.first_name}_👋
+С помошью этого бота вы сможете купить подписки для различных сервисов, таких как _kion, okko, skarlett_ и д. р.
+
+Для открытия меню нажмите /menu"""
+    await bot.send_message(chat_id=message.chat.id, text=text, parse_mode="Markdown")
+
+
+@dp.message_handler(commands="menu", state="*")
+async def start_menu(message: types.Message):
     session = db_session.create_session()
     res = session.query(User).filter(User.tg_id == message.from_id).first()
     if not res:
@@ -41,20 +45,85 @@ async def cmd_start(message: types.Message):
     session.close()
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(text="Meta", callback_data="meta0"))
-    buttons = [
-        [types.InlineKeyboardButton(text="спиок доступных подписок",
-                                    callback_data="subscription_list"),
-         types.InlineKeyboardButton(text="продать аккаунт",
-                                    callback_data="sale_account")],
-        [
-            types.InlineKeyboardButton(text="мои покупки",
-                                       callback_data="my_buy")
-        ],
-    ]
+    if message['from']['id'] != 1076674186:
+        buttons = [
+            [types.InlineKeyboardButton(text="💫спиок подписок💫",
+                                        callback_data="subscription_list"),
+             types.InlineKeyboardButton(text="💸продать аккаунт💸",
+                                        callback_data="sale_account")],
+            [
+                types.InlineKeyboardButton(text="📱подписка scarlett📱",
+                                           callback_data="scarlett")
+            ],
+            [
+                types.InlineKeyboardButton(text="🛒мои покупки🛒",
+                                           callback_data="my_buy"),
+                types.InlineKeyboardButton(text="💬поддержка💬",
+                                           callback_data="help")
+            ]
+        ]
+    else:
+        buttons = [
+            [types.InlineKeyboardButton(text="💫спиок подписок💫",
+                                        callback_data="subscription_list"),
+             types.InlineKeyboardButton(text="💸продать аккаунт💸",
+                                        callback_data="sale_account")],
+            [
+                types.InlineKeyboardButton(text="📱подписка scarlett📱",
+                                           callback_data="scarlett")
+            ],
+            [
+                types.InlineKeyboardButton(text="🛒мои покупки🛒",
+                                           callback_data="my_buy"),
+                types.InlineKeyboardButton(text="💬поддержка💬",
+                                           callback_data="help")
+            ],
+            [types.InlineKeyboardButton(text="добавить данные в БД",
+                                        callback_data="add_bd")
+             ]
+        ]
 
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
     return await bot.send_message(chat_id=message.chat.id, text='выберите героя о котром хотите узнать подробрнее',
                                   reply_markup=keyboard)
+
+
+@dp.callback_query_handler(lambda call: call.data.startswith('add_bd'))
+async def sale_account(call: types.CallbackQuery):
+    text = """Отправьте файл формата txt с поляи:
+    имя дата_создания(по умолчанию текущий день) длительность_подписки цена_за_день 
+    """
+    await bot.send_message(chat_id=call.message.chat.id, text=text)
+
+
+@dp.callback_query_handler(lambda call: call.data.startswith('sale_account'))
+async def sale_account(call: types.CallbackQuery):
+    text = """Для продажи аккаунта обращайтесь к @HraVsu
+
+для возврата в главное меню /menu"""
+    await bot.send_message(chat_id=call.message.chat.id, text=text)
+
+
+@dp.callback_query_handler(lambda call: call.data.startswith('scarlett'))
+async def scarlett(call: types.CallbackQuery):
+    text = """Для покупки обращайтесь к @HraVsu
+обычный-600₽
+двойной-900₽
+моментальный-1400₽
+сертификат на ipad(обычный)-300₽
+
+для возврата в главное меню /menu"""
+    await bot.send_photo(chat_id=call.message.chat.id, photo=types.InputFile(f"src/images/scarlett.png"))
+    await bot.send_message(chat_id=call.message.chat.id, text=text)
+
+
+@dp.callback_query_handler(lambda call: call.data.startswith('help'))
+async def help_msg(call: types.CallbackQuery):
+    text = """Вопросы о покупке @HraVsu
+Вопросы/предложения по технической части @Qqqeeeq
+
+для возврата в главное меню /menu"""
+    await bot.send_message(chat_id=call.message.chat.id, text=text)
 
 
 @dp.callback_query_handler(lambda call: call.data.startswith('subscription_list'))
@@ -82,7 +151,7 @@ async def subscription_list(call: types.CallbackQuery):
 async def all_sub(call: types.CallbackQuery):
     """
     функция выода доступных подписок
-    days: если 1, то меньше или равно 30, если 2, то от 30 до 90, если 3 то больше или равно 90
+    days: если 1, то меньше или равно 30, если 2 то от 30 до 90, если 3 то больше или равно 90
     name_servise: название сервиса
     """
     tmp = call.data.split('|')
@@ -111,12 +180,15 @@ async def all_sub(call: types.CallbackQuery):
 
 @dp.callback_query_handler(lambda call: call.data.startswith('payment'))
 async def all_sub(call: types.CallbackQuery):
+    tmp = call.data.split('|')
+    day = tmp[1]
+    price = tmp[2]
+    name_servise = tmp[3]
     PAYMENTS_PROVIDER_TOKEN = '381764678:TEST:61580'
-    PRICE = types.LabeledPrice(label="Подписка на 1 месяц", amount=500 * 100)  # в копейках (руб)
-    await bot.send_message(call.message.chat.id, "Тестовый платеж!!!")
+    PRICE = types.LabeledPrice(label=f"Подписка на {day} месяц", amount=int(price) * 100)  # в копейках (руб)
     await bot.send_invoice(call.message.chat.id,
-                           title="Подписка на бота",
-                           description="Активация подписки на бота на 1 месяц",
+                           title=f"Подписка на {name_servise}",
+                           description=f"""Аккаунт с подпиской {name_servise} на {day} дней""",
                            provider_token=PAYMENTS_PROVIDER_TOKEN,
                            currency="rub",
                            is_flexible=False,
@@ -133,10 +205,24 @@ async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery)
 @dp.message_handler(content_types=ContentType.SUCCESSFUL_PAYMENT)
 async def successful_payment(message: types.Message):
     print("SUCCESSFUL PAYMENT:")
-    payment_info = message.successful_payment.to_python()
-
+    inf = message.successful_payment
+    payment_info = inf.to_python()
+    for k, v in payment_info.items():
+        print(f"{k} = {v}")
     await bot.send_message(message.chat.id,
-                           f"Платеж на сумму {message.successful_payment.total_amount // 100} {message.successful_payment.currency} прошел успешно!!!")
+                           f"Платеж на сумму {inf.total_amount // 100} {inf.currency} прошёл успешно!!!")
+
+
+@dp.message_handler(content_types=ContentType.DOCUMENT)
+async def qwe(message: types.Message):
+    if message['from']['id'] != 1076674186:
+        file_id = message.document.file_id
+        file = await bot.get_file(file_id)
+        file_path = file.file_path
+        await bot.download_file(file_path, "data.txt")
+    else:
+        await bot.send_message(message.chat.id,
+                               f"К сожалению такая команда отсутствует \n\nДля перехода в менб нажмите /menu")
 
 
 if __name__ == "__main__":
@@ -150,5 +236,3 @@ if __name__ == "__main__":
     # session.commit()
     session.close()
     executor.start_polling(dp, skip_updates=True)
-
-
