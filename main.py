@@ -9,7 +9,7 @@ from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.types.message import ContentType
 from aiogram.dispatcher import filters
 
-from src.data.OperationsDataBase import add_user, get_subs, Buy_Subscription, start_DB, get_operations
+from src.data.OperationsDataBase import add_user, get_subs, buy_subscription, start_db, get_operations, get_one_sub
 import config
 
 nest_asyncio.apply()
@@ -77,8 +77,6 @@ async def start_menu(message: types.Message):
                                   reply_markup=keyboard)
 
 
-
-
 @dp.callback_query_handler(lambda call: call.data.startswith('my_buy'))
 async def my_buy(call: types.CallbackQuery):
     text = get_operations(call['from']['id'])
@@ -86,19 +84,19 @@ async def my_buy(call: types.CallbackQuery):
 
 
 @dp.callback_query_handler(lambda call: call.data.startswith('add_bd'))
-async def sale_account(call: types.CallbackQuery):
+async def information_add(call: types.CallbackQuery):
     text = """Отправьте текст формата:
     добавление в bd
-    login password дата_создания(по умолчанию текущий день) длительность_подписки цена_за_день 
+    login password имя_сервиса длительность_подписки цена_за_день(например: 123.45) дата_создания(по умолчанию-сегодня)[Enter]
     """
-    await bot.send_message(chat_id=call.message.chat.id, text=text)
+    await bot.send_message(chat_id=call.message.chat.id, text=text, parse_mode='Markdown')
 
 
 @dp.message_handler(filters.Text(contains="добавление в bd", ignore_case=True))
 async def text_example(message: types.Message):
     if message['from']['id'] == 1076674186:
         """она будет обрабатывать и добавлять данные в бд
-        формат данных в функцие которая выше
+           формат данных описан в функции выше
         """
         await bot.send_message(chat_id=message.chat.id, text='данные добавлены успешно!')
     else:
@@ -186,7 +184,7 @@ async def all_sub(call: types.CallbackQuery):
     name_service = tmp[3]
     sub_id = int(tmp[4])
     PAYMENTS_PROVIDER_TOKEN = '381764678:TEST:61580'
-    PRICE = types.LabeledPrice(label=f"Подписка на {day} месяц", amount=price)  # в копейках (руб)
+    PRICE = types.LabeledPrice(label=f"Подписка на {day} дней", amount=price)  # в копейках (руб)
     await bot.send_invoice(call.message.chat.id,
                            title=f"Подписка на {name_service}",
                            description=f"""Аккаунт с подпиской {name_service} на {day} дней""",
@@ -199,17 +197,22 @@ async def all_sub(call: types.CallbackQuery):
 
 
 @dp.pre_checkout_query_handler(lambda query: True)
-async def process_pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery):
-    flag = Buy_Subscription(pre_checkout_query.invoice_payload)  # если оплата не пройдёт, вернёт False
-    await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=True)
+async def pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery):
+    flag = buy_subscription(pre_checkout_query.invoice_payload)
+    return await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=flag, error_message=
+    'К сожалению, кто-то уже успел купить данную подписку.\nПожалуйста, попробуйте приобрести другую')
 
 
 @dp.message_handler(content_types=ContentType.SUCCESSFUL_PAYMENT)
-async def successful_payment(message: types.Message):
-    print("SUCCESSFUL PAYMENT:")
+async def process_successful_payment(message: types.Message):
     inf = message.successful_payment
+    sub_id, _, _ = str(inf.invoice_payload).split('|')
+    name, login, password = get_one_sub(int(sub_id))
     await bot.send_message(message.chat.id,
-                           f"Платеж на сумму {inf.total_amount // 100},{inf.total_amount % 100} {inf.currency} прошёл успешно!")
+                           f"_Поздравляем!_ Вы пробрели подписку на _{name}_ за "
+                           f"_{inf.total_amount // 100},{inf.total_amount % 100}_ {inf.currency}!\n"
+                           f"*Данные аккаунта =>\nЛогин:*{login}\n*Пароль:*{password}\n_До новых встреч!_",
+                           parse_mode='Markdown')
 
 
 @dp.message_handler(content_types=ContentType.DOCUMENT)
@@ -226,5 +229,5 @@ async def qwe(message: types.Message):
 
 if __name__ == "__main__":
     # Запуск бота
-    start_DB()
+    start_db()
     executor.start_polling(dp, skip_updates=True)

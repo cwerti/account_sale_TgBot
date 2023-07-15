@@ -8,9 +8,9 @@ from src.data.history import History
 from aiogram import types
 
 
-def start_DB():
+def start_db():
     db_session.global_init('src/db/TestDB.sqlite')
-    # add_Subscription()
+    # add_subscription(['sasasasa'])
 
 
 def add_user(user_tg_id: int):
@@ -30,17 +30,17 @@ def get_subs(button_index: int, name_service: str, user_tg_id: int) -> list:
     sess = db_session.create_session()
     user_id = sess.query(User).filter(User.tg_id == user_tg_id).first().id
     sub = sess.query(Subscription).filter(Subscription.name == name_service).all()  # фильтрация только по имени
-    sub = list(filter(flag_day, sub))  # фильтрация по оставшемуся времени(я заколебался в потоке пытаться сделать)
+    sub = list(filter(flag_day, sub))  # фильтрация по оставшемуся времени
     sub = list(filter(lambda x: ostat(x) * x.price >= 100., sub))  # ограничение телеграмма
     sub = list(filter(lambda x: str(user_id) not in x.users_id, sub))  # убираем подписки, на которые user уже подписан
     sess.close()
 
     return [types.InlineKeyboardButton(
-        text=f"{ostat(i)} дней {ostat(i) * i.price}р",
-        callback_data=f"payment|{ostat(i)}|{ostat(i) * i.price}|{name_service}|{i.id}") for i in sub]
+        text=f"{ostat(i)} дней {round(ostat(i) * i.price, 2)}р",
+        callback_data=f"payment|{ostat(i)}|{round(ostat(i) * i.price, 2)}|{name_service}|{i.id}") for i in sub]
 
 
-def Buy_Subscription(invoice_payload: str) -> bool:
+def buy_subscription(invoice_payload: str) -> bool:
     sub_id, user_tg_id, price = list(map(int, invoice_payload.split('|')))
     sess = db_session.create_session()
     sub = sess.get(Subscription, sub_id)
@@ -63,6 +63,12 @@ def Buy_Subscription(invoice_payload: str) -> bool:
     return True
 
 
+def get_one_sub(sub_id: int) -> list:
+    sess = db_session.create_session()
+    sub = sess.get(Subscription, sub_id)
+    return [sub.name, sub.login, sub.password]
+
+
 def get_operations(user_tg_id: int) -> str:
     sess = db_session.create_session()
     user = sess.query(User).filter(User.tg_id == user_tg_id).first()
@@ -79,20 +85,30 @@ def get_operations(user_tg_id: int) -> str:
         sub = sess.get(Subscription, operations[i].subscription_id)
         result += f"*{i + 1}) *{operations[i].created_date.replace(microsecond=0)} " \
                   f"Вы купили аккаунт на сервисе _{sub.name}_ длительностью {sub.duration} дней за " \
-                  f"{operations[i].price} рублей.\n*Данные аккаунта\nЛогин: *{sub.login}\n*Пароль: *{sub.password}\n\n"
+                  f"{operations[i].price} рублей.\n*Данные аккаунта =>\nЛогин: *{sub.login}\n*Пароль: *{sub.password}\n\n"
     result += 'Спасибо, что выбрали наш _Telegram-бот!_'
     print(result)
     return result
 
 
-def add_Subscription():
+def add_subscription(data: list[str]):
     session = db_session.create_session()
-    for i in [['okko', 133.3, 30, datetime.date(2023, 7, 1), '123', '312'],
-              ['prem', 6.66, 32, datetime.date(2023, 7, 13), '777', '775'],
-              ['kino', 12.66, 65, datetime.date(2023, 7, 13), 'gdg', 'zxc'],
-              ['ivi', 13.33, 92, datetime.date(2023, 6, 13), '7sf', 'pudge']]:
-        n, p, d, c, l, g = i
-        session.add(Subscription(name=n, price=p, duration=d, created_date=c, login=l, password=g))
+    subscriptions = []
+
+    for one_sub in data:
+        info_sub = one_sub.split()
+        login, password, name = info_sub[:3]
+        duration, price = int(info_sub[3]), float(info_sub[4])
+        created_date = info_sub[5] if len(info_sub) == 6 else datetime.datetime.now()
+        subscriptions.append(Subscription(name=name, login=login, password=password,
+                                          created_date=created_date, duration=duration, price=price))
+    session.bulk_save_objects(subscriptions)
+    # for i in [['123', '312', 'okko', 30, 133.3, datetime.date(2023, 7, 1)],
+    #           ['777', '775', 'prem', 32, 6.66, datetime.date(2023, 7, 13)],
+    #           ['gdg', 'zxc','kino', 65, 12.66,  datetime.date(2023, 7, 13)],
+    #           ['7sf', 'pudge', 'ivi', 92, 13.33, datetime.date(2023, 6, 13)]]:
+    #     l, g, n, d, p, c = i
+    #     session.add(Subscription(name=n, price=p, created_date=c, login=l, password=g, duration=d))
     session.commit()
     session.close()
 
