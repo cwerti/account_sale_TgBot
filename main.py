@@ -25,7 +25,7 @@ logging.basicConfig(level=logging.INFO)
 async def smd_start(message: types.Message):
     add_user(message.from_id)
     text = f"""Привет, _{message.chat.first_name}_👋
-С помощью этого бота вы сможете купить подписки для различных сервисов, таких как _kion, okko, skarlett_ и д. р.
+С помощью этого бота вы сможете купить подписки для различных сервисов, таких как _kion, okko, skarlett_ и др.
 
 Для открытия меню нажмите /menu"""
     await bot.send_message(chat_id=message.chat.id, text=text, parse_mode="Markdown")
@@ -99,7 +99,7 @@ async def sale_account(call: types.CallbackQuery):
     await bot.send_message(chat_id=call.message.chat.id, text=text)
 
 
-@dp.callback_query_handler(lambda call: call.data.startswith('scarlett'))
+@dp.callback_query_handler(lambda call: call.data.startswith('scarlet'))
 async def scarlett(call: types.CallbackQuery):
     text = """Для покупки обращайтесь к @HraVsu
 обычный-600₽
@@ -108,7 +108,7 @@ async def scarlett(call: types.CallbackQuery):
 сертификат на ipad(обычный)-300₽
 
 для возврата в главное меню /menu"""
-    await bot.send_photo(chat_id=call.message.chat.id, photo=types.InputFile(f"src/images/scarlett.png"))
+    await bot.send_photo(chat_id=call.message.chat.id, photo=types.InputFile(f"src/images/scarlet.png"))
     await bot.send_message(chat_id=call.message.chat.id, text=text)
 
 
@@ -125,25 +125,25 @@ async def help_msg(call: types.CallbackQuery):
 async def subscription_list(call: types.CallbackQuery):
     buttons = [
         [types.InlineKeyboardButton(text="Wink",
-                                    callback_data=f"servise|Wink"),
+                                    callback_data=f"service|Wink"),
          types.InlineKeyboardButton(text="Okko",
-                                    callback_data=f"servise|Okko"),
+                                    callback_data=f"service|Okko"),
          types.InlineKeyboardButton(text="ivi",
-                                    callback_data=f"servise|ivi")
+                                    callback_data=f"service|ivi")
          ],
         [types.InlineKeyboardButton(text="Kion",
-                                    callback_data=f"servise|Kion"),
+                                    callback_data=f"service|Kion"),
          types.InlineKeyboardButton(text="КиноПоиск",
-                                    callback_data=f"servise|КиноПоиск"),
+                                    callback_data=f"service|КиноПоиск"),
          types.InlineKeyboardButton(text="Premier",
-                                    callback_data=f"servise|Premier")]
+                                    callback_data=f"service|Premier")]
     ]
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
     await bot.send_message(chat_id=call.message.chat.id, text='Выберите нужный вам сервис✅',
                            reply_markup=keyboard)
 
 
-@dp.callback_query_handler(lambda call: call.data.startswith('servise'))
+@dp.callback_query_handler(lambda call: call.data.startswith('service'))
 async def subscription_list(call: types.CallbackQuery):
     """
     выводит сервисы
