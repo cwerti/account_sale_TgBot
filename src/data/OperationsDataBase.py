@@ -7,10 +7,13 @@ from src.data.history import History
 
 from aiogram import types
 
+createded = False
+
 
 def start_db():
     db_session.global_init('src/db/TestDB.sqlite')
-    # add_subscription(['sasasasa'])
+    if createded:
+        t = add_subscription(['sasasasa'])
 
 
 def add_user(user_tg_id: int):
@@ -89,32 +92,35 @@ def get_operations(user_tg_id: int) -> str:
                   f"Вы купили аккаунт на сервисе _{sub.name}_ длительностью {sub.duration} дней за " \
                   f"{operations[i].price} рублей.\n*Данные аккаунта =>\nЛогин: *{sub.login}\n*Пароль: *{sub.password}\n\n"
     result += 'Спасибо, что выбрали наш _Telegram-бот!_'
-    print(result)
     return result
 
 
 def add_subscription(data: list[str]) -> str:
     session = db_session.create_session()
     try:
-        subscriptions = []
+        if not createded:
+            subscriptions = []
 
-        for one_sub in data:
-            info_sub = one_sub.split()
-            login, password, name = info_sub[:3]
-            duration, price = int(info_sub[3]), float(info_sub[4])
-            created_date = datetime.datetime.now().replace(microsecond=0)
-            if len(info_sub) == 6:
-                created_date = datetime.datetime.strptime(info_sub[5], "%Y-%m-%d %H:%M:%S")
+            for one_sub in data:
+                info_sub = one_sub.split()
+                login, password, name = info_sub[:3]
+                duration, price = int(info_sub[3]), float(info_sub[4])
+                created_date = datetime.datetime.now().replace(microsecond=0)
+                if len(info_sub) == 6:
+                    created_date = datetime.datetime.strptime(info_sub[5], "%Y-%m-%d %H:%M:%S")
 
-            subscriptions.append(Subscription(name=name, login=login, password=password,
-                                              created_date=created_date, duration=duration, price=price))
-        session.bulk_save_objects(subscriptions)
-        # for i in [['123', '312', 'okko', 30, 133.3, datetime.date(2023, 7, 1)],
-        #           ['777', '775', 'prem', 32, 6.66, datetime.date(2023, 7, 13)],
-        #           ['gdg', 'zxc','kino', 65, 12.66,  datetime.date(2023, 7, 13)],
-        #           ['7sf', 'pudge', 'ivi', 92, 13.33, datetime.date(2023, 6, 13)]]:
-        #     l, g, n, d, p, c = i
-        #     session.add(Subscription(name=n, price=p, created_date=c, login=l, password=g, duration=d))
+                subscriptions.append(Subscription(name=name, login=login, password=password,
+                                                  created_date=created_date, duration=duration, price=price))
+            session.bulk_save_objects(subscriptions)
+        else:
+            for i in [['123', '312', 'okko', 30, 133.3, datetime.datetime(2023, 7, 1)],
+                      ['777', '775', 'premier', 32, 6.66, datetime.datetime(2023, 7, 13)],
+                      ['gdg', 'zxc','КиноПоиск', 65, 12.66,  datetime.datetime(2023, 7, 13)],
+                      ['7sf', 'pudge', 'ivi', 92, 13.33, datetime.datetime(2023, 6, 13)],
+                      ['asds', 'nameee', 'wink', 967, 10.33, datetime.datetime(2023, 6, 13)],
+                      ['bbbb', 'gfggf', 'kion', 123, 13.33, datetime.datetime(2023, 5, 13)]]:
+                l, g, n, d, p, c = i
+                session.add(Subscription(name=n, price=p, created_date=c, login=l, password=g, duration=d))
         session.commit()
         return 'данные успешно добавлены!'
     except:
