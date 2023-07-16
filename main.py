@@ -9,7 +9,8 @@ from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.types.message import ContentType
 from aiogram.dispatcher import filters
 
-from src.data.OperationsDataBase import add_user, get_subs, buy_subscription, start_db, get_operations, get_one_sub
+from src.data.OperationsDataBase import add_user, get_subs, buy_subscription_check,\
+    start_db, get_operations, buy_subscription_registration, add_subscription
 import config
 
 nest_asyncio.apply()
@@ -34,44 +35,25 @@ async def smd_start(message: types.Message):
 async def start_menu(message: types.Message):
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(types.InlineKeyboardButton(text="Meta", callback_data="meta0"))
-    if message['from']['id'] != 1076674186:
-        buttons = [
-            [types.InlineKeyboardButton(text="💫список подписок💫",
-                                        callback_data="subscription_list"),
-             types.InlineKeyboardButton(text="💸продать аккаунт💸",
-                                        callback_data="sale_account")],
-            [
-                types.InlineKeyboardButton(text="📱подписка scarlett📱",
-                                           callback_data="scarlett")
-            ],
-            [
-                types.InlineKeyboardButton(text="🛒мои покупки🛒",
-                                           callback_data="my_buy"),
-                types.InlineKeyboardButton(text="💬поддержка💬",
-                                           callback_data="help")
-            ]
-        ]
-    else:
-        buttons = [
-            [types.InlineKeyboardButton(text="💫список подписок💫",
-                                        callback_data="subscription_list"),
-             types.InlineKeyboardButton(text="💸продать аккаунт💸",
-                                        callback_data="sale_account")],
-            [
-                types.InlineKeyboardButton(text="📱подписка scarlett📱",
-                                           callback_data="scarlett")
-            ],
-            [
-                types.InlineKeyboardButton(text="🛒мои покупки🛒",
-                                           callback_data="my_buy"),
-                types.InlineKeyboardButton(text="💬поддержка💬",
-                                           callback_data="help")
-            ],
-            [types.InlineKeyboardButton(text="добавить данные в БД",
-                                        callback_data="add_bd")
-             ]
-        ]
-
+    buttons = [
+        [types.InlineKeyboardButton(text="💫список подписок💫",
+                                    callback_data="subscription_list"),
+         types.InlineKeyboardButton(text="💸продать аккаунт💸",
+                                    callback_data="sale_account")],
+        [
+            types.InlineKeyboardButton(text="📱подписка scarlett📱",
+                                       callback_data="scarlett")
+        ],
+        [
+            types.InlineKeyboardButton(text="🛒мои покупки🛒",
+                                       callback_data="my_buy"),
+            types.InlineKeyboardButton(text="💬поддержка💬",
+                                       callback_data="help")
+        ],
+    ]
+    if message['from']['id'] in config.admins_id:
+        buttons.append([types.InlineKeyboardButton(text="добавить данные в БД",
+                                                   callback_data="add_bd")])
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
     return await bot.send_message(chat_id=message.chat.id, text='выберите героя о котором хотите узнать подробнее',
                                   reply_markup=keyboard)
@@ -86,19 +68,24 @@ async def my_buy(call: types.CallbackQuery):
 @dp.callback_query_handler(lambda call: call.data.startswith('add_bd'))
 async def information_add(call: types.CallbackQuery):
     text = """Отправьте текст формата:
+    добавление в bd{Enter}
+    login password имя-сервиса длительность-подписки цена-за-день дата-создания(по умолчанию сегодня){Enter}
+    Например: *
     добавление в bd
-    login password имя_сервиса длительность_подписки цена_за_день(например: 123.45) дата_создания(по умолчанию-сегодня)[Enter]
+    log1 pass1 name1 30 123.45 2023-07-13 00:00:00
+    log2 pass2 name2 95 678.90*
     """
     await bot.send_message(chat_id=call.message.chat.id, text=text, parse_mode='Markdown')
 
 
 @dp.message_handler(filters.Text(contains="добавление в bd", ignore_case=True))
 async def text_example(message: types.Message):
-    if message['from']['id'] == 1076674186:
-        """она будет обрабатывать и добавлять данные в бд
-           формат данных описан в функции выше
-        """
-        await bot.send_message(chat_id=message.chat.id, text='данные добавлены успешно!')
+    """она будет обрабатывать и добавлять данные в бд
+       формат данных описан в функции выше
+    """
+    if message['from']['id'] in config.admins_id:
+        text = add_subscription(message.text.split('\n')[1:])
+        await bot.send_message(chat_id=message.chat.id, text=text, parse_mode="Markdown")
     else:
         await bot.send_message(chat_id=message.chat.id, text='такой команды не существует!')
 
@@ -157,7 +144,7 @@ async def subscription_list(call: types.CallbackQuery):
 @dp.callback_query_handler(lambda call: call.data.startswith('buy'))
 async def all_sub(call: types.CallbackQuery):
     """
-    функция выода доступных подписок
+    функция вывода доступных подписок
     days: если 0, то меньше или равно 30, если 1 то от 30 до 90, если 2 то больше или равно 90
     name_service: название сервиса
     """
@@ -177,7 +164,7 @@ async def all_sub(call: types.CallbackQuery):
 
 
 @dp.callback_query_handler(lambda call: call.data.startswith('payment'))
-async def all_sub(call: types.CallbackQuery):
+async def buy_sub(call: types.CallbackQuery):
     tmp = call.data.split('|')
     day = tmp[1]
     price = int(float(tmp[2]) * 100)
@@ -198,7 +185,7 @@ async def all_sub(call: types.CallbackQuery):
 
 @dp.pre_checkout_query_handler(lambda query: True)
 async def pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery):
-    flag = buy_subscription(pre_checkout_query.invoice_payload)
+    flag = buy_subscription_check(pre_checkout_query.invoice_payload)
     return await bot.answer_pre_checkout_query(pre_checkout_query.id, ok=flag, error_message=
     'К сожалению, кто-то уже успел купить данную подписку.\nПожалуйста, попробуйте приобрести другую')
 
@@ -206,25 +193,24 @@ async def pre_checkout_query(pre_checkout_query: types.PreCheckoutQuery):
 @dp.message_handler(content_types=ContentType.SUCCESSFUL_PAYMENT)
 async def process_successful_payment(message: types.Message):
     inf = message.successful_payment
-    sub_id, _, _ = str(inf.invoice_payload).split('|')
-    name, login, password = get_one_sub(int(sub_id))
+    name, login, password = buy_subscription_registration(inf.invoice_payload)
     await bot.send_message(message.chat.id,
                            f"_Поздравляем!_ Вы пробрели подписку на _{name}_ за "
                            f"_{inf.total_amount // 100},{inf.total_amount % 100}_ {inf.currency}!\n"
-                           f"*Данные аккаунта =>\nЛогин:*{login}\n*Пароль:*{password}\n_До новых встреч!_",
+                           f"*Данные аккаунта =>\nЛогин:* {login}\n*Пароль:* {password}\n_До новых встреч!_",
                            parse_mode='Markdown')
 
 
 @dp.message_handler(content_types=ContentType.DOCUMENT)
 async def qwe(message: types.Message):
-    if message['from']['id'] != 1076674186:
+    if message['from']['id'] in config.admins_id:
         file_id = message.document.file_id
         file = await bot.get_file(file_id)
         file_path = file.file_path
         await bot.download_file(file_path, "data.txt")
     else:
         await bot.send_message(message.chat.id,
-                               f"К сожалению такая команда отсутствует \n\nДля перехода в меню нажмите /menu")
+                               f"К сожалению, такая команда отсутствует \n\nДля перехода в меню нажмите /menu")
 
 
 if __name__ == "__main__":

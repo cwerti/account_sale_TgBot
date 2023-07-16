@@ -40,14 +40,21 @@ def get_subs(button_index: int, name_service: str, user_tg_id: int) -> list:
         callback_data=f"payment|{ostat(i)}|{round(ostat(i) * i.price, 2)}|{name_service}|{i.id}") for i in sub]
 
 
-def buy_subscription(invoice_payload: str) -> bool:
+def buy_subscription_check(invoice_payload: str) -> bool:
+    sub_id, _, _ = list(map(int, invoice_payload.split('|')))
+    sess = db_session.create_session()
+    sub = sess.get(Subscription, sub_id)
+    sess.close()
+
+    if len(sub.users_id.split()) > 3:
+        return False
+    return True
+
+
+def buy_subscription_registration(invoice_payload: str) -> list:
     sub_id, user_tg_id, price = list(map(int, invoice_payload.split('|')))
     sess = db_session.create_session()
     sub = sess.get(Subscription, sub_id)
-
-    if len(sub.users_id.split()) > 4:
-        sess.close()
-        return False
 
     user = sess.query(User).filter(User.tg_id == user_tg_id).first()
     operation = History(subscription_id=sub_id, user_id=user.id, price=float(f"{price // 100}.{price % 100}"))
@@ -55,18 +62,13 @@ def buy_subscription(invoice_payload: str) -> bool:
     sess.flush()
 
     user.subscriptions_id += f" {sub.id}"
-    sub.users_id += f" {user.id}"
     user.operations_id += f" {operation.id}"
-
+    sub.users_id += f" {user.id}"
+    sess.flush()
+    name, login, password = sub.name, sub.login, sub.password
     sess.commit()
     sess.close()
-    return True
-
-
-def get_one_sub(sub_id: int) -> list:
-    sess = db_session.create_session()
-    sub = sess.get(Subscription, sub_id)
-    return [sub.name, sub.login, sub.password]
+    return [name, login, password]
 
 
 def get_operations(user_tg_id: int) -> str:
@@ -91,24 +93,32 @@ def get_operations(user_tg_id: int) -> str:
     return result
 
 
-def add_subscription(data: list[str]):
+def add_subscription(data: list[str]) -> str:
     session = db_session.create_session()
-    subscriptions = []
+    try:
+        subscriptions = []
 
-    for one_sub in data:
-        info_sub = one_sub.split()
-        login, password, name = info_sub[:3]
-        duration, price = int(info_sub[3]), float(info_sub[4])
-        created_date = info_sub[5] if len(info_sub) == 6 else datetime.datetime.now()
-        subscriptions.append(Subscription(name=name, login=login, password=password,
-                                          created_date=created_date, duration=duration, price=price))
-    session.bulk_save_objects(subscriptions)
-    # for i in [['123', '312', 'okko', 30, 133.3, datetime.date(2023, 7, 1)],
-    #           ['777', '775', 'prem', 32, 6.66, datetime.date(2023, 7, 13)],
-    #           ['gdg', 'zxc','kino', 65, 12.66,  datetime.date(2023, 7, 13)],
-    #           ['7sf', 'pudge', 'ivi', 92, 13.33, datetime.date(2023, 6, 13)]]:
-    #     l, g, n, d, p, c = i
-    #     session.add(Subscription(name=n, price=p, created_date=c, login=l, password=g, duration=d))
-    session.commit()
-    session.close()
+        for one_sub in data:
+            info_sub = one_sub.split()
+            login, password, name = info_sub[:3]
+            duration, price = int(info_sub[3]), float(info_sub[4])
+            created_date = datetime.datetime.now().replace(microsecond=0)
+            if len(info_sub) == 6:
+                created_date = datetime.datetime.strptime(info_sub[5], "%Y-%m-%d %H:%M:%S")
+
+            subscriptions.append(Subscription(name=name, login=login, password=password,
+                                              created_date=created_date, duration=duration, price=price))
+        session.bulk_save_objects(subscriptions)
+        # for i in [['123', '312', 'okko', 30, 133.3, datetime.date(2023, 7, 1)],
+        #           ['777', '775', 'prem', 32, 6.66, datetime.date(2023, 7, 13)],
+        #           ['gdg', 'zxc','kino', 65, 12.66,  datetime.date(2023, 7, 13)],
+        #           ['7sf', 'pudge', 'ivi', 92, 13.33, datetime.date(2023, 6, 13)]]:
+        #     l, g, n, d, p, c = i
+        #     session.add(Subscription(name=n, price=p, created_date=c, login=l, password=g, duration=d))
+        session.commit()
+        return 'данные успешно добавлены!'
+    except:
+        return '*Данные некорректны.* _Каждую подписку пишите с новой строки!_'
+    finally:
+        session.close()
 
