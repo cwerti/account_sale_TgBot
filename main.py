@@ -89,12 +89,12 @@ async def information_add(call: types.CallbackQuery):
     добавление в bd
     login password имя_сервиса длительность_подписки цена_за_день(например: 123.45) дата_создания(по умолчанию-сегодня)[Enter]
     """
-    await bot.send_message(chat_id=call.message.chat.id, text=text, parse_mode='Markdown')
+    await bot.send_message(chat_id=call.message.chat.id, text=text)
 
 
 @dp.message_handler(filters.Text(contains="добавление в bd", ignore_case=True))
 async def text_example(message: types.Message):
-    if message['from']['id'] == 1076674186:
+    if str(message['from']['id']) in config.admin:
         """она будет обрабатывать и добавлять данные в бд
            формат данных описан в функции выше
         """
@@ -183,11 +183,11 @@ async def all_sub(call: types.CallbackQuery):
     price = int(float(tmp[2]) * 100)
     name_service = tmp[3]
     sub_id = int(tmp[4])
-    PAYMENTS_PROVIDER_TOKEN = '381764678:TEST:61580'
-    PRICE = types.LabeledPrice(label=f"Подписка на {day} дней", amount=price)  # в копейках (руб)
+    PAYMENTS_PROVIDER_TOKEN = config.pay_token
+    PRICE = types.LabeledPrice(label=f"Подписка на {day} дн.", amount=price)  # в копейках (руб)
     await bot.send_invoice(call.message.chat.id,
                            title=f"Подписка на {name_service}",
-                           description=f"""Аккаунт с подпиской {name_service} на {day} дней""",
+                           description=f"""Аккаунт с подпиской {name_service} на {day} дн.""",
                            provider_token=PAYMENTS_PROVIDER_TOKEN,
                            currency="rub",
                            is_flexible=False,
@@ -211,13 +211,13 @@ async def process_successful_payment(message: types.Message):
     await bot.send_message(message.chat.id,
                            f"_Поздравляем!_ Вы пробрели подписку на _{name}_ за "
                            f"_{inf.total_amount // 100},{inf.total_amount % 100}_ {inf.currency}!\n"
-                           f"*Данные аккаунта =>\nЛогин:*{login}\n*Пароль:*{password}\n_До новых встреч!_",
+                           f"*Данные аккаунта =>\nЛогин:*{login}\n*Пароль:*{password}\n_До новых встреч!_\n\nДля возврата в меню /menu",
                            parse_mode='Markdown')
 
 
 @dp.message_handler(content_types=ContentType.DOCUMENT)
 async def qwe(message: types.Message):
-    if message['from']['id'] != 1076674186:
+    if str(message['from']['id']) in config.admin:
         file_id = message.document.file_id
         file = await bot.get_file(file_id)
         file_path = file.file_path
