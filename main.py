@@ -25,7 +25,7 @@ logging.basicConfig(level=logging.INFO)
 async def smd_start(message: types.Message):
     add_user(message.from_id)
     text = f"""Привет, _{message.chat.first_name}_👋
-С помощью этого бота вы сможете купить подписки для различных сервисов, таких как _kion, okko, skarlett_ и др.
+С помощью этого бота вы сможете купить подписки для различных сервисов, таких как _kion, okko, sсarlet_ и др.
 
 Для открытия меню нажмите /menu"""
     await bot.send_message(chat_id=message.chat.id, text=text, parse_mode="Markdown")
@@ -41,7 +41,7 @@ async def start_menu(message: types.Message):
          types.InlineKeyboardButton(text="💸продать аккаунт💸",
                                     callback_data="sale_account")],
         [
-            types.InlineKeyboardButton(text="📱подписка scarlett📱",
+            types.InlineKeyboardButton(text="📱сертификат scarlet📱",
                                        callback_data="scarlett")
         ],
         [
@@ -57,6 +57,35 @@ async def start_menu(message: types.Message):
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
     await bot.send_photo(chat_id=message.chat.id, photo=types.InputFile(f"src/images/logo.jpg"))
     return await bot.send_message(chat_id=message.chat.id, text='Что будем делать❓',
+                                  reply_markup=keyboard)
+
+
+@dp.callback_query_handler(lambda call: call.data.startswith('menu'))
+async def start_menu(call: types.CallbackQuery):
+    keyboard = types.InlineKeyboardMarkup()
+    keyboard.add(types.InlineKeyboardButton(text="Meta", callback_data="meta0"))
+    buttons = [
+        [types.InlineKeyboardButton(text="💫список подписок💫",
+                                    callback_data="subscription_list"),
+         types.InlineKeyboardButton(text="💸продать аккаунт💸",
+                                    callback_data="sale_account")],
+        [
+            types.InlineKeyboardButton(text="📱подписка scarlett📱",
+                                       callback_data="scarlet")
+        ],
+        [
+            types.InlineKeyboardButton(text="🛒мои покупки🛒",
+                                       callback_data="my_buy"),
+            types.InlineKeyboardButton(text="💬поддержка💬",
+                                       callback_data="help")
+        ],
+    ]
+    if call.message['from']['id'] in config.admins_id:
+        buttons.append([types.InlineKeyboardButton(text="добавить данные в БД",
+                                                   callback_data="add_bd")])
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
+    await bot.send_photo(chat_id=call.message.chat.id, photo=types.InputFile(f"src/images/logo.jpg"))
+    return await bot.send_message(chat_id=call.message.chat.id, text='Что будем делать❓',
                                   reply_markup=keyboard)
 
 
@@ -136,7 +165,10 @@ async def subscription_list(call: types.CallbackQuery):
          types.InlineKeyboardButton(text="КиноПоиск",
                                     callback_data=f"service|КиноПоиск"),
          types.InlineKeyboardButton(text="Premier",
-                                    callback_data=f"service|Premier")]
+                                    callback_data=f"service|Premier")],
+        [types.InlineKeyboardButton(text="Назад",
+                                    callback_data=f"menu")
+         ]
     ]
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
     await bot.send_message(chat_id=call.message.chat.id, text='Выберите нужный вам сервис✅',
