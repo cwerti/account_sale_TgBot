@@ -9,7 +9,7 @@ from aiogram.contrib.middlewares.logging import LoggingMiddleware
 from aiogram.types.message import ContentType
 from aiogram.dispatcher import filters
 
-from src.data.OperationsDataBase import add_user, get_subs, buy_subscription_check,\
+from src.data.OperationsDataBase import add_user, get_subs, buy_subscription_check, \
     start_db, get_operations, buy_subscription_registration, add_subscription
 import config
 
@@ -55,7 +55,8 @@ async def start_menu(message: types.Message):
         buttons.append([types.InlineKeyboardButton(text="добавить данные в БД",
                                                    callback_data="add_bd")])
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
-    return await bot.send_message(chat_id=message.chat.id, text='выберите героя о котором хотите узнать подробнее',
+    await bot.send_photo(chat_id=message.chat.id, photo=types.InputFile(f"src/images/logo.jpg"))
+    return await bot.send_message(chat_id=message.chat.id, text='Что будем делать❓',
                                   reply_markup=keyboard)
 
 
@@ -122,23 +123,45 @@ async def help_msg(call: types.CallbackQuery):
 
 @dp.callback_query_handler(lambda call: call.data.startswith('subscription_list'))
 async def subscription_list(call: types.CallbackQuery):
+    buttons = [
+        [types.InlineKeyboardButton(text="Wink",
+                                    callback_data=f"servise|Wink"),
+         types.InlineKeyboardButton(text="Okko",
+                                    callback_data=f"servise|Okko"),
+         types.InlineKeyboardButton(text="ivi",
+                                    callback_data=f"servise|ivi")
+         ],
+        [types.InlineKeyboardButton(text="Kion",
+                                    callback_data=f"servise|Kion"),
+         types.InlineKeyboardButton(text="КиноПоиск",
+                                    callback_data=f"servise|КиноПоиск"),
+         types.InlineKeyboardButton(text="Premier",
+                                    callback_data=f"servise|Premier")]
+    ]
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
+    await bot.send_message(chat_id=call.message.chat.id, text='Выберите нужный вам сервис✅',
+                           reply_markup=keyboard)
+
+
+@dp.callback_query_handler(lambda call: call.data.startswith('servise'))
+async def subscription_list(call: types.CallbackQuery):
     """
-    выводит все сервисы
+    выводит сервисы
     """
-    for i in config.service_lst:
-        buttons = [
-            [types.InlineKeyboardButton(text="меньше 30",
-                                        callback_data=f"buy|0|{i}"),
-             types.InlineKeyboardButton(text="от 30 до 90",
-                                        callback_data=f"buy|1|{i}"),
-             types.InlineKeyboardButton(text="больше 90",
-                                        callback_data=f"buy|2|{i}")
-             ]
-        ]
-        keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
-        await bot.send_photo(chat_id=call.message.chat.id, photo=types.InputFile(f"src/images/{i}.png"))
-        await bot.send_message(chat_id=call.message.chat.id, text='выберите количество дней подписки',
-                               reply_markup=keyboard)
+    name_service = call.data.split('|')[1]
+    buttons = [
+        [types.InlineKeyboardButton(text="меньше 30",
+                                    callback_data=f"buy|0|{name_service}"),
+         types.InlineKeyboardButton(text="от 30 до 90",
+                                    callback_data=f"buy|1|{name_service}"),
+         types.InlineKeyboardButton(text="больше 90",
+                                    callback_data=f"buy|2|{name_service}")
+         ]
+    ]
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
+    await bot.send_photo(chat_id=call.message.chat.id, photo=types.InputFile(f"src/images/{name_service}.png"))
+    await bot.send_message(chat_id=call.message.chat.id, text='выберите количество дней подписки',
+                           reply_markup=keyboard)
 
 
 @dp.callback_query_handler(lambda call: call.data.startswith('buy'))
@@ -161,7 +184,6 @@ async def all_sub(call: types.CallbackQuery):
     if len(but) == 0:
         text = f"К сожалению, все подписки на сервис _{name_service}_ раскуплены."
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
-    await bot.send_photo(chat_id=call.message.chat.id, photo=types.InputFile(f"src/images/{name_service}.png"))
     await bot.send_message(chat_id=call.message.chat.id, text=text,
                            reply_markup=keyboard, parse_mode='Markdown')
 
