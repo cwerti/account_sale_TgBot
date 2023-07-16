@@ -114,10 +114,10 @@ def add_subscription(data: list[str]) -> str:
             session.bulk_save_objects(subscriptions)
         else:
             for i in [['123', '312', 'okko', 30, 133.3, datetime.datetime(2023, 7, 1)],
-                      ['777', '775', 'premier', 32, 6.66, datetime.datetime(2023, 7, 13)],
+                      ['777', '775', 'Premier', 32, 6.66, datetime.datetime(2023, 7, 13)],
                       ['gdg', 'zxc','КиноПоиск', 65, 12.66,  datetime.datetime(2023, 7, 13)],
                       ['7sf', 'pudge', 'ivi', 92, 13.33, datetime.datetime(2023, 6, 13)],
-                      ['asds', 'nameee', 'wink', 967, 10.33, datetime.datetime(2023, 6, 13)],
+                      ['asds', 'nameee', 'Wink', 967, 10.33, datetime.datetime(2023, 6, 13)],
                       ['bbbb', 'gfggf', 'kion', 123, 13.33, datetime.datetime(2023, 5, 13)]]:
                 l, g, n, d, p, c = i
                 session.add(Subscription(name=n, price=p, created_date=c, login=l, password=g, duration=d))
