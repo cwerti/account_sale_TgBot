@@ -93,6 +93,7 @@ async def start_menu(call: types.CallbackQuery):
 async def my_buy(call: types.CallbackQuery):
     text = get_operations(call['from']['id'])
     await bot.send_message(chat_id=call.message.chat.id, text=text, parse_mode='Markdown')
+    await call.answer()
 
 
 @dp.callback_query_handler(lambda call: call.data.startswith('add_bd'))
@@ -106,6 +107,7 @@ async def information_add(call: types.CallbackQuery):
     log2 pass2 name2 95 678.90*
     """
     await bot.send_message(chat_id=call.message.chat.id, text=text, parse_mode='Markdown')
+    await call.answer()
 
 
 @dp.message_handler(filters.Text(contains="добавление в bd", ignore_case=True))
@@ -126,6 +128,7 @@ async def sale_account(call: types.CallbackQuery):
 
 для возврата в главное меню /menu"""
     await bot.send_message(chat_id=call.message.chat.id, text=text)
+    await call.answer()
 
 
 @dp.callback_query_handler(lambda call: call.data.startswith('scarlet'))
@@ -139,6 +142,7 @@ async def scarlett(call: types.CallbackQuery):
 для возврата в главное меню /menu"""
     await bot.send_photo(chat_id=call.message.chat.id, photo=types.InputFile(f"src/images/scarlet.png"))
     await bot.send_message(chat_id=call.message.chat.id, text=text)
+    await call.answer()
 
 
 @dp.callback_query_handler(lambda call: call.data.startswith('help'))
@@ -148,6 +152,7 @@ async def help_msg(call: types.CallbackQuery):
 
 для возврата в главное меню /menu"""
     await bot.send_message(chat_id=call.message.chat.id, text=text)
+    await call.answer()
 
 
 @dp.callback_query_handler(lambda call: call.data.startswith('subscription_list'))
@@ -173,6 +178,7 @@ async def subscription_list(call: types.CallbackQuery):
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
     await bot.send_message(chat_id=call.message.chat.id, text='Выберите нужный вам сервис✅',
                            reply_markup=keyboard)
+    await call.answer()
 
 
 @dp.callback_query_handler(lambda call: call.data.startswith('service'))
@@ -194,6 +200,7 @@ async def subscription_list(call: types.CallbackQuery):
     await bot.send_photo(chat_id=call.message.chat.id, photo=types.InputFile(f"src/images/{name_service}.png"))
     await bot.send_message(chat_id=call.message.chat.id, text='выберите количество дней подписки',
                            reply_markup=keyboard)
+    await call.answer()
 
 
 @dp.callback_query_handler(lambda call: call.data.startswith('buy'))
@@ -218,6 +225,7 @@ async def all_sub(call: types.CallbackQuery):
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=buttons)
     await bot.send_message(chat_id=call.message.chat.id, text=text,
                            reply_markup=keyboard, parse_mode='Markdown')
+    await call.answer()
 
 
 @dp.callback_query_handler(lambda call: call.data.startswith('payment'))
@@ -238,6 +246,7 @@ async def buy_sub(call: types.CallbackQuery):
                            prices=[PRICE],
                            start_parameter="one-month-subscription",
                            payload=f"{sub_id}|{call['from']['id']}|{price}")
+    await call.answer()
 
 
 @dp.pre_checkout_query_handler(lambda query: True)
